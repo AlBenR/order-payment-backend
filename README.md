@@ -1,27 +1,31 @@
-# Order Management System
+# Order & Payment Backend System
 
-Proyecto backend profesional construido con **Java 17 + Spring Boot**, enfocado en **arquitectura hexagonal**, **DDD** y **event-driven architecture** usando el **Transactional Outbox Pattern**.
-
-Este proyecto está diseñado explícitamente para ser mostrado en un **CV técnico**, priorizando decisiones arquitectónicas reales por encima de ejemplos simplificados.
+Proyecto backend profesional construido con **Java 17 + Spring Boot**, enfocado en **arquitectura hexagonal**, **Domain-Driven Design (DDD)** y **Event-Driven Architecture**, utilizando el **Transactional Outbox Pattern** para garantizar consistencia e integración confiable entre contextos.
 
 ---
 
 ## 🧩 Problemática que resuelve
 
-Gestiona el ciclo de vida completo de una orden:
+Gestiona de forma consistente el **flujo completo de órdenes y pagos**, separando responsabilidades por contexto de negocio y comunicándolos mediante eventos.
 
+### Order Context
 - Creación de órdenes
 - Confirmación
-- Pago
 - Cancelación
 - Envío
+- Emisión de eventos de dominio confiables
+
+### Payment Context
+- Creación de pagos a partir de órdenes confirmadas
+- Asociación Payment ↔ Order
+- Persistencia consistente
+- Emisión de eventos de pago
 
 Garantizando:
-
-- Reglas de negocio consistentes
+- Reglas de negocio explícitas
 - Transiciones de estado válidas
-- Emisión confiable de eventos de dominio
-- Integración eventual con otros sistemas (Kafka / mensajería)
+- Consistencia transaccional
+- Integración eventual entre contextos
 
 ---
 
@@ -29,31 +33,50 @@ Garantizando:
 
 ### Arquitectura Hexagonal (Ports & Adapters)
 
-La aplicación está dividida claramente en:
+Cada contexto está estructurado siguiendo Ports & Adapters:
 
-- **domain** → Modelo de dominio puro (sin Spring)
-- **application** → Casos de uso (services / ports in)
-- **infrastructure** → Persistencia, REST, outbox, adapters
+domain
+├─ model
+├─ event
+├─ ports
+│ ├─ in
+│ └─ out
+application
+├─ service
+infrastructure
+├─ repository
+├─ outbox
+├─ adapters
+└─ rest
 
 Esto permite:
-
-- Independencia del framework
+- Dominio puro (sin dependencias de Spring)
 - Alta testabilidad
-- Evolución segura del dominio
+- Evolución segura del modelo de negocio
+- Independencia del framework
 
 ---
 
 ## 📦 Domain-Driven Design (DDD)
 
-- Aggregate Root: **Order**
-- Entidades de valor: `OrderItem`, `Money`
-- Reglas de negocio encapsuladas en el dominio
-- Eventos de dominio explícitos:
+### Order Context
+- **Aggregate Root**: `Order`
+- Value Objects: `OrderId`, `Money`, `OrderItem`
+- Estados controlados explícitamente
+- Eventos de dominio:
   - `OrderCreatedEvent`
   - `OrderConfirmedEvent`
-  - `OrderPaidEvent`
   - `OrderCancelledEvent`
   - `OrderShippedEvent`
+
+### Payment Context
+- **Aggregate Root**: `Payment`
+- Value Objects: `PaymentId`, `OrderId`, `Money`
+- Eventos de dominio:
+  - `PaymentCreatedEvent`
+  - `PaymentFailedEvent`
+
+Las reglas de negocio viven **dentro del dominio**, no en servicios anémicos.
 
 ---
 
@@ -64,43 +87,51 @@ Esto permite:
 Los eventos de dominio **no se publican directamente**.
 
 Flujo:
-
 1. El dominio genera eventos
-2. Se persisten en `outbox_events` dentro de la misma transacción
-3. Un **Outbox Relay** los procesa de forma asíncrona
-4. Se publican a un adaptador externo (Kafka / Message Broker)
+2. Se persisten en la tabla `outbox_events` dentro de la misma transacción
+3. Un **Outbox Processor** los consume de forma asíncrona
+4. Se publican a adaptadores externos (Kafka / Message Broker / integración simulada)
 
-Esto garantiza:
-
+Beneficios:
 - Consistencia transaccional
 - No pérdida de eventos
-- Idempotencia
+- Publicación desacoplada
+- Base sólida para microservicios
 
 ---
 
-## 🔁 Retry & Backoff
+## 🔁 Retry, Backoff y Estados
 
-El Outbox Relay implementa:
-
+El Outbox implementa:
 - Reintentos automáticos
-- Backoff progresivo
-- Límite máximo de intentos
-- Estados:
-  - `PENDING`
-  - `SENT`
-  - `FAILED`
+- Control de intentos
+- Backoff basado en tiempo
+- Estados explícitos:
+  PENDING
+  SENT
+  FAILED
+  
+---
 
-Diseñado para producción real.
+## 🔗 Integración entre contextos
+
+- El **Order Context** emite `OrderConfirmedEvent`
+- El **Payment Context** lo consume mediante un adapter inbound
+- Se crea un `Payment` de forma eventual y consistente
+- Se evita acoplamiento directo entre contextos
+
+Esto refleja una **integración realista entre bounded contexts**.
 
 ---
 
 ## 🧪 Testing
 
-- Tests de dominio
+- Tests de dominio (sin Spring)
 - Tests de application services
 - Tests de controladores REST
+- Validación de reglas de negocio y transiciones de estado
 
-El dominio se prueba **sin Spring**, garantizando aislamiento real.
+El dominio se prueba de forma **aislada**, garantizando verdadera independencia.
 
 ---
 
@@ -121,6 +152,5 @@ El dominio se prueba **sin Spring**, garantizando aislamiento real.
 
 ```bash
 mvn spring-boot:run
-```
----
+
 
