@@ -35,6 +35,7 @@ Garantizando:
 
 Cada contexto está estructurado siguiendo Ports & Adapters:
 
+```
 domain
 ├─ model
 ├─ event
@@ -48,6 +49,7 @@ infrastructure
 ├─ outbox
 ├─ adapters
 └─ rest
+```
 
 Esto permite:
 - Dominio puro (sin dependencias de Spring)
