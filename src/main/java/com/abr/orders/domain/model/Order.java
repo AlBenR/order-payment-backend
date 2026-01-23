@@ -81,7 +81,10 @@ public class Order {
         this.status = OrderStatus.CONFIRMED;
         addStatusHistory(previous, this.status);
         registerEvent(
-                new OrderConfirmedEvent(this.id));
+                new OrderConfirmedEvent(
+                        this.id,
+                        this.totalAmount().getAmount())
+        );
     }
 
     public void markAsPaid() {

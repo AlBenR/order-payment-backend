@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -32,15 +34,20 @@ public class OutboxRelay {
     public void processPendingEvents() {
 
         Instant now = clock.instant();
+        Instant threshold = Instant.now().minus(1, ChronoUnit.SECONDS);
 
         List<OutboxEventEntity> events =
-                repository.findPending(OutboxStatus.PENDING, 5);
+                repository.findPending(OutboxStatus.PENDING, 5, threshold);
 
         for (OutboxEventEntity event : events) {
 
-            if (!event.canRetry(now)) {
+            if (event.isInternal()) {
                 continue;
             }
+
+            /*if (!event.canRetry(now)) {
+                continue;
+            }*/
 
             try {
                 publisher.publish(event);

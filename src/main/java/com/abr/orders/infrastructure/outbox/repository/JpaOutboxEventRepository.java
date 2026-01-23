@@ -6,21 +6,21 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 public interface JpaOutboxEventRepository extends JpaRepository<OutboxEventEntity, UUID> {
 
-    List<OutboxEventEntity> findByStatus(OutboxStatus status);
-
     @Query("""
-    select e
-    from OutboxEventEntity e
+    select e from OutboxEventEntity e
     where e.status = :status
       and e.attempts < :maxAttempts
-""")
+      and e.occurredOn < :threshold
+    """)
     List<OutboxEventEntity> findPending(
             @Param("status") OutboxStatus status,
-            @Param("maxAttempts") int maxAttempts
+            @Param("maxAttempts") int maxAttempts,
+            @Param("threshold") Instant threshold // <--- Cambia a Instant
     );
 }

@@ -21,4 +21,14 @@ public class OrderPaidEvent extends DomainEvent {
     public BigDecimal getTotalAmount() {
         return totalAmount;
     }
+
+    @Override
+    public UUID getAggregateId() {
+        return orderId;
+    }
+
+    @Override
+    public String getAggregateType() {
+        return "OrderPaid";
+    }
 }

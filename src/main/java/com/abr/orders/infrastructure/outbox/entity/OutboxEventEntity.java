@@ -1,15 +1,18 @@
 package com.abr.orders.infrastructure.outbox.entity;
 
 import com.abr.orders.domain.event.DomainEvent;
+import com.abr.shared.event.GettersOutboxEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
+@Setter
 @Getter
 @Entity
 @Table(name = "outbox_events")
@@ -57,21 +60,36 @@ public class OutboxEventEntity {
         this.status = status;
     }
 
-    public static OutboxEventEntity from(DomainEvent event, ObjectMapper objectMapper
+    public static OutboxEventEntity from(
+            Object event,
+            ObjectMapper objectMapper
     ) {
         try {
-            return new OutboxEventEntity(
-                    "Order",
-                    event.getEventId(),
-                    event.getClass().getSimpleName(),
-                    objectMapper.writeValueAsString(event),
-                    event.getOccurredAt(),
-                    OutboxStatus.PENDING
-            );
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Cannot serialize domain event", e);
+            if (!(event instanceof com.abr.shared.event.GettersOutboxEvent gettersOutboxEvent)) {
+                throw new IllegalArgumentException(
+                        "Event does not implement OutboxEvent: " + event.getClass()
+                );
+            }
+            OutboxEventEntity entity = new OutboxEventEntity();
+
+            entity.setAggregateType(gettersOutboxEvent.getAggregateType());
+            entity.setAggregateId(gettersOutboxEvent.getAggregateId());
+            entity.setEventType(event.getClass().getSimpleName());
+            entity.setPayload(objectMapper.writeValueAsString(event));
+            entity.setOccurredOn(Instant.now());
+            entity.setStatus(OutboxStatus.PENDING);
+
+            return entity;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to serialize outbox event", e);
         }
     }
+
+    public boolean isInternal() {
+        return aggregateType.equals("Order")
+                || aggregateType.equals("Payment");
+    }
+
 
     public void markAsSent() {
         this.status = OutboxStatus.SENT;

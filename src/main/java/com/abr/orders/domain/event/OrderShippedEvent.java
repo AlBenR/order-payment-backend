@@ -13,4 +13,14 @@ public class OrderShippedEvent extends DomainEvent {
     public UUID getOrderId() {
         return orderId;
     }
+
+    @Override
+    public UUID getAggregateId() {
+        return orderId;
+    }
+
+    @Override
+    public String getAggregateType() {
+        return "OrderShipped";
+    }
 }
