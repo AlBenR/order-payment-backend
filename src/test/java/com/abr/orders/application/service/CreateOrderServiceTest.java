@@ -3,11 +3,13 @@ package com.abr.orders.application.service;
 import com.abr.orders.domain.exception.BusinessRuleViolationException;
 import com.abr.orders.domain.model.*;
 import com.abr.orders.domain.ports.out.OrderRepository;
+import com.abr.shared.application.security.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,21 +29,29 @@ public class CreateOrderServiceTest {
     @Test
     void shouldCreateOrderSuccessfully() {
 
-        UUID customerId = UUID.randomUUID();
+        AuthenticatedUser user =
+                new AuthenticatedUser(
+                        UUID.randomUUID(),
+                        "AuthUser",
+                        Set.of("CUSTOMER")
+                );
+
         List<OrderItem> items = List.of(
-                new OrderItem(UUID.randomUUID(),
+                new OrderItem(
+                        UUID.randomUUID(),
                         2,
-                        new Money(new BigDecimal("10")))
+                        new Money(new BigDecimal("10"))
+                )
         );
 
-        //Because of CreateOrderService make orderRepository.save, we configure mock for return everything
-        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(i -> i.getArgument(0));
 
-        Order createdOrder = service.create(customerId, items);
+        Order createdOrder = service.create(user, items);
 
         assertNotNull(createdOrder);
         assertNotNull(createdOrder.getId());
-        assertEquals(customerId, createdOrder.getCustomerId());
+        assertEquals(user.userId(), createdOrder.getCustomerId());
 
         verify(orderRepository).save(any(Order.class));
     }
@@ -49,13 +59,18 @@ public class CreateOrderServiceTest {
     @Test
     void shouldNotPersistOrderWhenDomainRejectsCreation() {
 
-        UUID customerId = UUID.randomUUID();
-        List<OrderItem> emptyItems = List.of(); // Empty list.
+        AuthenticatedUser user =
+                new AuthenticatedUser(
+                        UUID.randomUUID(),
+                        "AuthUser",
+                        Set.of("CUSTOMER")
+                );
 
-        // Creating order with an empty list of OrderItem.
+        List<OrderItem> emptyItems = List.of();
+
         assertThrows(
                 BusinessRuleViolationException.class,
-                () -> service.create(customerId, emptyItems)
+                () -> service.create(user,emptyItems)
         );
 
         verify(orderRepository, never()).save(any());

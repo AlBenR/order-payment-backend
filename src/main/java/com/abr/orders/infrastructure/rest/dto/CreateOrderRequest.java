@@ -12,7 +12,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateOrderRequest {
 
-    private UUID customerId;
     private List<OrderItemRequest> items;
 
 }

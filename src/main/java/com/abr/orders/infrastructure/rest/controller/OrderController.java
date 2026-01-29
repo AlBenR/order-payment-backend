@@ -8,6 +8,10 @@ import com.abr.orders.domain.ports.in.*;
 import com.abr.orders.infrastructure.rest.dto.*;
 import com.abr.orders.infrastructure.rest.mapper.OrderRestMapper;
 
+import com.abr.shared.application.security.AuthenticatedUser;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -50,14 +54,16 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<OrderResponse> create(@RequestBody CreateOrderRequest request) {
-
+    public ResponseEntity<OrderResponse> create(
+            @RequestBody CreateOrderRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user
+    ) {
         List<OrderItem> items = request.getItems().stream()
                 .map(mapper::toDomain)
                 .toList();
 
         Order order = createOrder.create(
-                request.getCustomerId(),
+                user,
                 items
         );
 
@@ -66,12 +72,14 @@ public class OrderController {
                 .body(mapper.toResponse(order));
     }
 
+    @PreAuthorize("hasRole('CUSTOMER')")
     @PostMapping("/{id}/confirm")
     public ResponseEntity<Void> confirm(@PathVariable UUID id) {
         confirmOrder.confirm(id);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/pay")
     public ResponseEntity<Void> pay(
             @PathVariable UUID id,
@@ -82,12 +90,14 @@ public class OrderController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/ship")
     public ResponseEntity<Void> ship(@PathVariable UUID id) {
         shipOrder.ship(id);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/cancel")
     public ResponseEntity<Void> cancel(@PathVariable UUID id) {
         cancelOrder.cancel(id);
@@ -95,9 +105,12 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderResponse> get(@PathVariable UUID id) {
+    public ResponseEntity<OrderResponse> get(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal AuthenticatedUser user
+    ) {
         return ResponseEntity.ok(
-                mapper.toResponse(getOrder.getById(id))
+                mapper.toResponse(getOrder.getById(id, user))
         );
     }
 
