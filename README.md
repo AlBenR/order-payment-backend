@@ -157,7 +157,7 @@ El sistema implementa seguridad **realista y profesional**:
   - Crear órdenes
   - Consultar sus órdenes
 - `ADMIN` puede:
-  - Confirmar órdenes
+  - Visualizar todas las ordenes.
   - Enviar órdenes
 
 La lógica de autorización **no contamina el dominio**.
