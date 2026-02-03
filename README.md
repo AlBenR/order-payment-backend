@@ -1,214 +1,72 @@
 # Order & Payment Backend System
 
-Proyecto backend **profesional** construido con **Java 17 + Spring Boot**, diseñado para demostrar dominio real de **arquitectura hexagonal**, **Domain-Driven Design (DDD)**, **Event-Driven Architecture**, **seguridad con JWT**, y **buenas prácticas de testing**.
+Backend system built with **Java 17 + Spring Boot**, focused on **clean architecture**, **DDD**, **event-driven integration**, **JWT security**, and **AWS deployment**.
 
-El sistema modela un flujo realista de **órdenes y pagos**, con separación clara de responsabilidades por **bounded context** y comunicación desacoplada mediante eventos confiables usando el **Transactional Outbox Pattern**.
+The project models a real-world **order and payment flow**, designed to demonstrate production-ready backend practices.
 
----
+## 🚀 Key Features
 
-## 🧩 Problemática que resuelve
-
-Gestiona de forma consistente y segura el **ciclo completo de vida de una orden**, desde su creación hasta el pago y envío, garantizando:
-
-- Reglas de negocio explícitas
-- Transiciones de estado válidas
-- Consistencia transaccional
-- Seguridad por roles
-- Integración eventual entre contextos
-
----
+- Hexagonal Architecture (Ports & Adapters)
+- Domain-Driven Design (DDD)
+- Event-Driven Architecture with Transactional Outbox
+- Secure authentication with JWT and role-based authorization
+- Separation by bounded contexts (Order, Payment, Auth)
+- PostgreSQL persistence
+- Deployed and tested on AWS (EC2 + RDS)
+- Unit and integration testing across layers
 
 ## 🧠 Bounded Contexts
 
-### 🛒 Order Context
-Responsable del ciclo de vida de las órdenes:
+- **Order**: order lifecycle management (create, confirm, cancel, pay, ship)
+- **Payment**: payment processing linked to confirmed orders
+- **Auth**: authentication, authorization and user management (JWT, roles)
 
-- Creación de órdenes
-- Confirmación
-- Cancelación
-- Pago
-- Envío
-- Emisión de eventos de dominio confiables
+## 🏗️ Architecture
 
-### 💳 Payment Context
-Responsable de los pagos asociados a órdenes confirmadas:
+The system follows **Hexagonal Architecture**, keeping the domain fully isolated from frameworks.
 
-- Creación de pagos
-- Asociación `Payment ↔ Order`
-- Persistencia consistente
-- Emisión de eventos de pago
+Key benefits:
+- High testability
+- Low coupling
+- Clean separation of concerns
+- Ready for microservices evolution
 
-### 🔐 Auth Context
-Responsable de la autenticación y autorización:
+## 🔔 Event-Driven Design
 
-- Registro y gestión de usuarios
-- Roles (`CUSTOMER`, `ADMIN`)
-- Autenticación mediante **JWT**
-- Inicialización automática de usuario administrador
-- Separación completa del dominio de órdenes y pagos
+- Domain events persisted using the **Transactional Outbox Pattern**
+- Asynchronous event processing
+- Retry, backoff and explicit event states (PENDING, SENT, FAILED)
+- Reliable and consistent integration between bounded contexts
 
----
+## 🔐 Security
 
-## 🏗️ Arquitectura
+- Stateless authentication using JWT
+- Role-based authorization (CUSTOMER, ADMIN)
+- Security fully decoupled from domain logic
 
-### Arquitectura Hexagonal (Ports & Adapters)
+## ☁️ AWS Deployment
 
-Cada contexto sigue **Ports & Adapters**, manteniendo el dominio completamente aislado de frameworks:
+- EC2 used to run the Spring Boot application
+- RDS PostgreSQL used as external database
+- Network isolation using Security Groups
+- Application exposed on port 8080
+- Database access restricted to EC2 security group only
 
-```
-domain
-├─ model
-├─ event
-├─ ports
-│ ├─ in
-│ └─ out
-application
-├─ service
-infrastructure
-├─ repository
-├─ outbox
-├─ adapters
-└─ rest
-```
+Infrastructure can be recreated easily; currently stopped to avoid costs.
 
-
-Beneficios clave:
-- Dominio puro (sin dependencias de Spring)
-- Alta testabilidad
-- Evolución segura del modelo
-- Bajo acoplamiento
-- Preparado para microservicios
-
----
-
-## 📦 Domain-Driven Design (DDD)
-
-### Order Context
-- **Aggregate Root**: `Order`
-- Value Objects: `OrderId`, `Money`, `OrderItem`
-- Estados explícitos y controlados
-- Eventos de dominio:
-  - `OrderCreatedEvent`
-  - `OrderConfirmedEvent`
-  - `OrderCancelledEvent`
-  - `OrderPaidEvent`
-  - `OrderShippedEvent`
-
-### Payment Context
-- **Aggregate Root**: `Payment`
-- Value Objects: `PaymentId`, `OrderId`, `Money`
-- Eventos de dominio:
-  - `PaymentCreatedEvent`
-  - `PaymentFailedEvent`
-
-Las reglas de negocio viven **en el dominio**, no en servicios anémicos.
-
----
-
-## 🔔 Event-Driven Architecture
-
-### Transactional Outbox Pattern
-
-Los eventos de dominio **no se publican directamente**.
-
-Flujo:
-1. El dominio genera eventos
-2. Se persisten en la tabla `outbox_events` dentro de la misma transacción
-3. Un **Outbox Processor** los consume de forma asíncrona
-4. Se publican a adaptadores externos (simulados)
-
-Beneficios:
-- Consistencia transaccional
-- No pérdida de eventos
-- Publicación desacoplada
-- Base sólida para sistemas distribuidos
-
----
-
-## 🔁 Retry, Backoff y Estados del Outbox
-
-El Outbox implementa:
-- Reintentos automáticos
-- Control de intentos
-- Backoff basado en tiempo
-- Estados explícitos:
-  - `PENDING`
-  - `SENT`
-  - `FAILED`
-
----
-
-## 🔐 Seguridad (Spring Security + JWT)
-
-El sistema implementa seguridad **realista y profesional**:
-
-- Autenticación stateless con **JWT**
-- Roles:
-  - `CUSTOMER`
-  - `ADMIN`
-- Control de acceso por endpoint
-- Separación clara entre:
-  - Seguridad
-  - Dominio
-  - Casos de uso
-
-### Reglas de acceso (ejemplo)
-- `CUSTOMER` puede:
-  - Crear órdenes
-  - Consultar sus órdenes
-- `ADMIN` puede:
-  - Visualizar todas las ordenes.
-  - Enviar órdenes
-
-La lógica de autorización **no contamina el dominio**.
-
----
-
-## 🔑 Modelo de Usuario
-
-- `AuthenticatedUser` como modelo de seguridad compartido
-- Extracción del usuario autenticado mediante `CurrentUserProvider`
-- Adaptación limpia entre Spring Security y el dominio
-
----
-
-## 🧪 Testing
-
-Cobertura de pruebas a múltiples niveles:
-
-- ✅ Tests de dominio (sin Spring)
-- ✅ Tests de application services
-- ✅ Tests de controladores REST
-- ✅ Tests de seguridad con `@WebMvcTest` y `spring-security-test`
-
-Separación clara entre:
-- **Controller Tests** (funcionalidad)
-- **Security Tests** (autorización y autenticación)
-
-Esto garantiza:
-- Dominio verdaderamente aislado
-- Seguridad verificable
-- Alta confianza en el comportamiento del sistema
-
----
-
-## 🛠️ Stack Tecnológico
+## 🛠️ Tech Stack
 
 - Java 17
 - Spring Boot
 - Spring Security
 - JWT
-- Spring Data JPA
-- Hibernate
-- PostgreSQL / H2
+- Spring Data JPA / Hibernate
+- PostgreSQL
 - Maven
-- Lombok
-- JUnit 5
-- Mockito
+- JUnit 5 / Mockito
+- AWS EC2 & RDS
 
----
-
-## 🚀 Cómo ejecutar el proyecto
+## ▶️ Run Locally
 
 ```bash
 mvn spring-boot:run
